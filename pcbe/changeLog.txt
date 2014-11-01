@@ -1,0 +1,1 @@
+Aici se vor nota modificarile aduse functionalitatii (pe larg) nu cele din mesajul de commit
