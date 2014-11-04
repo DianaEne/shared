@@ -7,53 +7,82 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Persoana extends Thread{
 	private int uid;
-	private Integer buget = 2000;
 	private Logger localLogger;
-	private static Bursa bursa = Bursa.getInstance();
+	private Bursa bursa; 
 	private Random random;
 	private Map<String,Oferta> oferte = new ConcurrentHashMap<String, Oferta>();
+	private int ocupatie; // 0=cumparator 1=vanzator
+	private int buget;
+	private Oferta ofertaCurenta;
 	
 	public Persoana(int uid)
-	{	this.localLogger=new Logger();
-		this.uid=uid;
-		random = new Random();
-		creazaOferteRandom();
+	{	
+		bursa = Bursa.getInstance(10, 10);
+		if(bursa == null)
+			System.out.println("Error bursa == null");
+		this.localLogger = new Logger();
+		this.uid = uid;
+		this.ocupatie = new Random().nextInt(2);
+		this.buget = 2000;
+		ofertaCurenta = this.CreeazaOferta();
+		ofertaCurenta.setUserId(uid);
 	}
 
-	public int getUid() {
+	private Oferta CreeazaOferta()
+	{
+		Firma firma = bursa.getFirmaRandom(ocupatie);
+		return firma.getOfertaRandom(ocupatie, buget);
+	}
+	
+	
+	public void cumpara(Oferta o)
+	{
+		buget = buget - o.getValoare();
+		localLogger.TranzactieCumparare(uid, o);
+	}
+	
+	public void vinde(Oferta o)
+	{
+		buget = buget + o.getValoare();
+		localLogger.TranzactieVanzare(uid, o);
+	}
+	
+	public int getUid() 
+	{
 		return uid;
 	}
 	
-	public void creazaOferteRandom()
+	public void run() 
 	{	
-		
-	}
-	
-	public void cumparaOferta() 
-	{	int i;
-		Firma firma = bursa.getFirma();
-		Oferta oferta = firma.getOfertaRandom();
+		Firma firma = bursa.getFirmaById(ofertaCurenta.getFirma());
+		if(firma == null)
+			System.out.println("firma null");
+		Oferta ofertaCautata = firma.CautaOferta(ofertaCurenta);
+		if(ofertaCautata == null)
+			System.out.println("ofertaCautata null");
 		
 		//test
-		if(oferta==null)
+		if(ofertaCautata==null)
 		{
-			//System.out.println("incearca sa cumpere de la el insusi");
+			System.out.println("Error! Tranzactie esuata!");
 			return;
 		}
 		
-		bursa.proceseazaComanda(oferta, this);
+		if(ofertaCurenta.getStare())
+		{
+			ofertaCurenta.Dezactivare();
+			if(ocupatie == 0) //cumparator
+				this.cumpara(ofertaCautata);
+			if(ocupatie == 1) //vanzator
+				this.vinde(ofertaCautata);
+		}
+		//else
+			//run();
 	}
 	
-	public int getNumarActiuniLaFirma(String numeFirma)
-	{	
-		Oferta oferta = oferte.get(numeFirma);
-		if(oferta == null)
-		{	
-			return 0;
-		}
-		else
-		{	
-			return oferta.getNumarActiuni();
-		}
+	public void afisareLocalLogger() 
+	{
+		localLogger.printLog();		
 	}
+
 }
